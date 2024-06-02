@@ -1,12 +1,17 @@
+using LeadStatusUpdater.Business.Services;
+using LeadStatusUpdater.Core.Requests;
+
 namespace LeadStatusUpdater.Service;
 
 public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
+    private readonly IProcessingService _service;
 
-    public Worker(ILogger<Worker> logger)
+    public Worker(ILogger<Worker> logger, IProcessingService service)
     {
         _logger = logger;
+        _service = service;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -17,6 +22,9 @@ public class Worker : BackgroundService
             {
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
             }
+
+            GetLeadsRequest request = new GetLeadsRequest();
+            _service.GetLeadStatus(request);
 
             await Task.Delay(1000, stoppingToken);
         }
