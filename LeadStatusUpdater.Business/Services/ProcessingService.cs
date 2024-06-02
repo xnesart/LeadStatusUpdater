@@ -1,6 +1,7 @@
 ﻿using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Enums;
 using LeadStatusUpdater.Core.Requests;
+using System.Transactions;
 
 namespace LeadStatusUpdater.Business.Services;
 
@@ -151,5 +152,69 @@ public class ProcessingService : IProcessingService
         }
 
         return 0;
+    }
+    public async Task<decimal> ConvertToRublesAsync(int amount, CurrencyType currencyType)
+    {
+        // Здесь нужен код для получения актуального курса валют
+        decimal exchangeRate = await GetExchangeRateAsync(currencyType);
+        decimal amountInRubles = amount * exchangeRate;
+        return amountInRubles;
+    }
+    // временная заглушка, переделать
+    private async Task<decimal> GetExchangeRateAsync(CurrencyType currencyType)
+    {
+        switch (currencyType)
+        {
+            case CurrencyType.USD:
+                return 90.00M;
+            case CurrencyType.EUR:
+                return 98.00M;
+            case CurrencyType.JPY:
+                return 0.58M;
+            case CurrencyType.CNY:
+                return 12.72M;
+            case CurrencyType.RSD:
+                return 0.84M;
+            case CurrencyType.BGN:
+                return 50.14M;
+            case CurrencyType.ARS:
+                return 0.10M;
+            default:
+                return 1M;
+        }
+    }
+    public async Task CoutingDifferenceDepositAmountsAsync(GetLeadsRequest request)
+    {
+        foreach (var lead in request.Leads)
+        {
+            decimal totalDeposits = 0;
+            decimal totalWithdraws = 0;
+
+            foreach (var account in lead.Accounts)
+            {
+                foreach (var transaction in account.Transactions)
+                {
+                    if (transaction.Date >= DateTime.UtcNow.AddMonths(-1))
+                    {
+                        decimal amountInRubles = await ConvertToRublesAsync(transaction.Amount, transaction.CurrencyType);
+
+                        switch (transaction.TransactionType)
+                        {
+                            case TransactionType.Deposit:
+                                totalDeposits += amountInRubles;
+                                break;
+                            case TransactionType.Withdraw:
+                                totalWithdraws += amountInRubles;
+                                break;
+                        }
+                    }
+                }
+            }
+
+            if (totalDeposits - totalWithdraws > 13000)
+            {
+                lead.Status = LeadStatus.Vip;
+            }
+        }
     }
 }
