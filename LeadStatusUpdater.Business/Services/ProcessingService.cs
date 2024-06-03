@@ -76,80 +76,46 @@ public class ProcessingService : IProcessingService
 
     private bool CheckCountOfTransactions(GetLeadsRequest request, int countOfTransactionsMustBiggestThen)
     {
-        var result = false;
+        if (request.Leads == null) return false;
 
-        if (request.Leads != null)
+        int countOfDeposit = GetCountOfDepositTransactions(request);
+        int countOfTransfer = GetCountOFTransferTransactions(request);
+
+        int countOfAll = countOfDeposit + (countOfTransfer / 2);
+
+        return countOfAll > countOfTransactionsMustBiggestThen;
+    }
+
+    private int GetCountOfTransactionsByType(GetLeadsRequest request, TransactionType type)
+    {
+        DateTime startDate = DateTime.Now.AddDays(-request.TimePeriodInDays);
+
+        foreach (var lead in request.Leads)
         {
-            int countOfDeposit = GetCountOfDepositTransactions(request);
-            int countOfTrasfer = GetCountOFTransferTransactions(request);
-
-            int countOfAll = 0;
-            if (countOfTrasfer != 0)
+            if (lead != null && lead.Accounts != null)
             {
-                countOfAll = countOfDeposit + countOfTrasfer / 2;
-            }
-            else
-            {
-                countOfAll = countOfDeposit;
-            }
+                foreach (var account in lead.Accounts)
+                {
+                    var transactions = account.Transactions.FindAll(t =>
+                        t.TransactionType == type && t.Date >= startDate);
 
-            if (countOfAll > countOfTransactionsMustBiggestThen)
-            {
-                result = true;
-                return result;
-            }
+                    int transactionsCount = transactions.Count;
 
-            return result;
+                    return transactionsCount;
+                }
+            }
         }
 
-        return result;
+        return 0;
     }
 
     private int GetCountOfDepositTransactions(GetLeadsRequest request)
     {
-        DateTime startDate = DateTime.Now.AddDays(-request.TimePeriodInDays);
-
-        foreach (var lead in request.Leads)
-        {
-            if (lead != null && lead.Accounts != null)
-            {
-                foreach (var account in lead.Accounts)
-                {
-                    if (lead.Accounts == null) continue;
-
-                    var depositTransactions = account.Transactions.FindAll(t =>
-                        t.TransactionType == TransactionType.Deposit && t.Date >= startDate);
-
-                    int depositCount = depositTransactions.Count;
-
-                    return depositCount;
-                }
-            }
-        }
-
-        return 0;
+        return GetCountOfTransactionsByType(request, TransactionType.Deposit);
     }
 
     private int GetCountOFTransferTransactions(GetLeadsRequest request)
     {
-        DateTime startDate = DateTime.Now.AddDays(-request.TimePeriodInDays);
-
-        foreach (var lead in request.Leads)
-        {
-            if (lead != null && lead.Accounts != null)
-            {
-                foreach (var account in lead.Accounts)
-                {
-                    if (lead.Accounts == null) continue;
-
-                    var transferTransactions = account.Transactions.FindAll(t =>
-                        t.TransactionType == TransactionType.Transfer && t.Date >= startDate);
-                    int transferCount = transferTransactions.Count;
-                    return transferCount;
-                }
-            }
-        }
-
-        return 0;
+        return GetCountOfTransactionsByType(request, TransactionType.Transfer);
     }
 }
