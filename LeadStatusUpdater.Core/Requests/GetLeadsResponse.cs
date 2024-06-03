@@ -2,7 +2,7 @@
 
 namespace LeadStatusUpdater.Core.Requests;
 
-public class GetLeadsRequest
+public class GetLeadsResponse
 {
     public List<LeadDto> Leads { get; set; }
     public int TimePeriodInDays { get; set; }

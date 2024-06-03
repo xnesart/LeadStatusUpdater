@@ -6,9 +6,9 @@ namespace LeadStatusUpdater.Business.Services;
 
 public class ProcessingService : IProcessingService
 {
-    public void GetLeadStatus(GetLeadsRequest request)
+    public void GetLeadStatus(GetLeadsResponse response)
     {
-        var leadsRequest = new GetLeadsRequest()
+        var leadsRequest = new GetLeadsResponse()
         {
             Leads = new List<LeadDto>()
             {
@@ -74,23 +74,23 @@ public class ProcessingService : IProcessingService
         Console.WriteLine(res);
     }
 
-    private bool CheckCountOfTransactions(GetLeadsRequest request, int countOfTransactionsMustBiggestThen)
+    private bool CheckCountOfTransactions(GetLeadsResponse response, int countOfTransactionsMustBiggestThen)
     {
-        if (request.Leads == null) return false;
+        if (response.Leads == null) return false;
 
-        int countOfDeposit = GetCountOfDepositTransactions(request);
-        int countOfTransfer = GetCountOFTransferTransactions(request);
+        int countOfDeposit = GetCountOfDepositTransactions(response);
+        int countOfTransfer = GetCountOFTransferTransactions(response);
 
         int countOfAll = countOfDeposit + (countOfTransfer / 2);
 
         return countOfAll > countOfTransactionsMustBiggestThen;
     }
 
-    private int GetCountOfTransactionsByType(GetLeadsRequest request, TransactionType type)
+    private int GetCountOfTransactionsByType(GetLeadsResponse response, TransactionType type)
     {
-        DateTime startDate = DateTime.Now.AddDays(-request.TimePeriodInDays);
+        DateTime startDate = DateTime.Now.AddDays(-response.TimePeriodInDays);
 
-        foreach (var lead in request.Leads)
+        foreach (var lead in response.Leads)
         {
             if (lead != null && lead.Accounts != null)
             {
@@ -109,13 +109,13 @@ public class ProcessingService : IProcessingService
         return 0;
     }
 
-    private int GetCountOfDepositTransactions(GetLeadsRequest request)
+    private int GetCountOfDepositTransactions(GetLeadsResponse response)
     {
-        return GetCountOfTransactionsByType(request, TransactionType.Deposit);
+        return GetCountOfTransactionsByType(response, TransactionType.Deposit);
     }
 
-    private int GetCountOFTransferTransactions(GetLeadsRequest request)
+    private int GetCountOFTransferTransactions(GetLeadsResponse response)
     {
-        return GetCountOfTransactionsByType(request, TransactionType.Transfer);
+        return GetCountOfTransactionsByType(response, TransactionType.Transfer);
     }
 }

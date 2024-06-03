@@ -23,8 +23,8 @@ public class Worker : BackgroundService
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
             }
 
-            GetLeadsRequest request = new GetLeadsRequest();
-            _service.GetLeadStatus(request);
+            GetLeadsResponse response = new GetLeadsResponse();
+            _service.GetLeadStatus(response);
 
             await Task.Delay(1000, stoppingToken);
         }
