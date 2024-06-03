@@ -8,7 +8,7 @@ public class ProcessingService : IProcessingService
 {
     public void GetLeadStatus(GetLeadsResponse response)
     {
-        var leadsRequest = new GetLeadsResponse()
+        var leadsResponse = new GetLeadsResponse()
         {
             Leads = new List<LeadDto>()
             {
@@ -70,7 +70,7 @@ public class ProcessingService : IProcessingService
             TimePeriodInDays = 60
         };
 
-        var res = CheckCountOfTransactions(leadsRequest, 1);
+        var res = CheckCountOfTransactions(leadsResponse, 1);
         Console.WriteLine(res);
     }
 
