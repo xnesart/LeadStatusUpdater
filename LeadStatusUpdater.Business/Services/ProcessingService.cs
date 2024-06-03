@@ -1,6 +1,6 @@
 ﻿using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Enums;
-using LeadStatusUpdater.Core.Requests;
+using LeadStatusUpdater.Core.Responses;
 
 namespace LeadStatusUpdater.Business.Services;
 

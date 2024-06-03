@@ -1,5 +1,5 @@
 using LeadStatusUpdater.Business.Services;
-using LeadStatusUpdater.Core.Requests;
+using LeadStatusUpdater.Core.Responses;
 
 namespace LeadStatusUpdater.Service;
 
