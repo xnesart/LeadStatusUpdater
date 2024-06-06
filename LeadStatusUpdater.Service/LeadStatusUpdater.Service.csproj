@@ -4,10 +4,15 @@
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <UserSecretsId>dotnet-LeadStatusUpdater.Service-8BC01338-08A7-40FA-B55A-E09EF6C7DFAB</UserSecretsId>
+        <UserSecretsId>dotnet-LeadStatusUpdater.Service-2EE32015-AC70-48FB-9AE6-0FA4D34F83AC</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\LeadStatusUpdater.Business\LeadStatusUpdater.Business.csproj" />
+      <ProjectReference Include="..\LeadStatusUpdater.Core\LeadStatusUpdater.Core.csproj" />
     </ItemGroup>
 </Project>

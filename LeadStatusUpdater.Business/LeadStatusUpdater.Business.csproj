@@ -6,4 +6,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\LeadStatusUpdater.Core\LeadStatusUpdater.Core.csproj" />
+    </ItemGroup>
+
 </Project>
