@@ -8,6 +8,7 @@ public class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
         builder.Services.AddTransient<IProcessingService, ProcessingService>();
+        builder.Services.AddTransient<IHttpClientService, HttpClientService>();
         builder.Services.AddHostedService<Worker>();
 
         var host = builder.Build();

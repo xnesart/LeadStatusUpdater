@@ -7,11 +7,13 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IProcessingService _service;
+    private readonly IHttpClientService _httpClient;
 
-    public Worker(ILogger<Worker> logger, IProcessingService service)
+    public Worker(ILogger<Worker> logger, IProcessingService service, IHttpClientService httpClient)
     {
         _logger = logger;
         _service = service;
+        _httpClient = httpClient;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -24,6 +26,7 @@ public class Worker : BackgroundService
             }
 
             GetLeadsResponse response = new GetLeadsResponse();
+            var leads =_httpClient.GetLeads(stoppingToken);
             _service.GetLeadStatus(response);
 
             await Task.Delay(1000, stoppingToken);
