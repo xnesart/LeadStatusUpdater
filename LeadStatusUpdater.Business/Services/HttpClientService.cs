@@ -13,7 +13,7 @@ public class HttpClientService : IHttpClientService
         _settings = settings.Value;
     }
     
-    public async Task<GetLeadsResponse> Get(string urlForRequest,CancellationToken cancellationToken)
+    public async Task<T> Get<T>(string urlForRequest,CancellationToken cancellationToken)
     {
         var options = new RestClientOptions(_settings.BaseUrl);
     
@@ -21,7 +21,7 @@ public class HttpClientService : IHttpClientService
 
         var request = new RestRequest(urlForRequest);
         
-        var response = await client.GetAsync<GetLeadsResponse>(request, cancellationToken);
+        var response = await client.GetAsync<T>(request, cancellationToken);
         
         return response;
     }

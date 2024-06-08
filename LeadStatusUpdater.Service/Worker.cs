@@ -26,7 +26,7 @@ public class Worker : BackgroundService
             }
 
             GetLeadsResponse response = new GetLeadsResponse();
-            var leads = _httpClient.Get("someUrl", stoppingToken);
+            var leads = _httpClient.Get<GetLeadsResponse>("someUrl", stoppingToken);
             _service.GetLeadStatus(response);
 
             await Task.Delay(1000, stoppingToken);
