@@ -1,22 +1,25 @@
 using LeadStatusUpdater.Core.Responses;
+using LeadStatusUpdater.Core.Settings;
+using Microsoft.Extensions.Options;
 using RestSharp;
 
 namespace LeadStatusUpdater.Business.Services;
 
 public class HttpClientService : IHttpClientService
 {
-    public HttpClientService()
+    private readonly HttpClientSettings _settings;
+    public HttpClientService(IOptions<HttpClientSettings> settings)
     {
+        _settings = settings.Value;
     }
-    private const string GetLeadsUrl = "https://194.87.210.5:11000/api/";
     
-    public async Task<GetLeadsResponse> GetLeads(CancellationToken cancellationToken)
+    public async Task<GetLeadsResponse> Get(string urlForRequest,CancellationToken cancellationToken)
     {
-        var options = new RestClientOptions(GetLeadsUrl);
+        var options = new RestClientOptions(_settings.BaseUrl);
     
         var client = new RestClient(options);
 
-        var request = new RestRequest("report/leads-with-transactions");
+        var request = new RestRequest(urlForRequest);
         
         var response = await client.GetAsync<GetLeadsResponse>(request, cancellationToken);
         

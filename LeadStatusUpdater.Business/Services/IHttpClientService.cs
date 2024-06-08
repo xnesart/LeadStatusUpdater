@@ -4,5 +4,5 @@ namespace LeadStatusUpdater.Business.Services;
 
 public interface IHttpClientService
 {
-    Task<GetLeadsResponse> GetLeads(CancellationToken cancellationToken);
+    Task<GetLeadsResponse> Get(string urlForRequest,CancellationToken cancellationToken);
 }
