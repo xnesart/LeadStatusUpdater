@@ -1,16 +1,15 @@
 ﻿using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Enums;
-<<<<<<< HEAD
 using LeadStatusUpdater.Core.Requests;
 using System.Transactions;
-=======
 using LeadStatusUpdater.Core.Responses;
->>>>>>> master
 
 namespace LeadStatusUpdater.Business.Services;
 
 public class ProcessingService : IProcessingService
 {
+    private const decimal DifferenceBetweenAmount = 13000;
+    private const int MonthsAgo = -1;
     public void GetLeadStatus(GetLeadsResponse response)
     {
         var leadsResponse = new GetLeadsResponse()
@@ -164,7 +163,7 @@ public class ProcessingService : IProcessingService
             {
                 foreach (var transaction in account.Transactions)
                 {
-                    if (transaction.Date >= DateTime.UtcNow.AddMonths(-1))
+                    if (transaction.Date >= DateTime.UtcNow.AddMonths(MonthsAgo))
                     {
                         decimal amountInRubles = await ConvertToRublesAsync(transaction.Amount, transaction.CurrencyType);
 
@@ -181,7 +180,7 @@ public class ProcessingService : IProcessingService
                 }
             }
 
-            if (totalDeposits - totalWithdraws > 13000)
+            if (totalDeposits - totalWithdraws > DifferenceBetweenAmount)
             {
                 lead.Status = LeadStatus.Vip;
             }
