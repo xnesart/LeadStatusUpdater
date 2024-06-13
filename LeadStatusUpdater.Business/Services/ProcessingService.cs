@@ -1,15 +1,19 @@
 ﻿using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Enums;
+<<<<<<< HEAD
 using LeadStatusUpdater.Core.Requests;
 using System.Transactions;
+=======
+using LeadStatusUpdater.Core.Responses;
+>>>>>>> master
 
 namespace LeadStatusUpdater.Business.Services;
 
 public class ProcessingService : IProcessingService
 {
-    public void GetLeadStatus(GetLeadsRequest request)
+    public void GetLeadStatus(GetLeadsResponse response)
     {
-        var leadsRequest = new GetLeadsRequest()
+        var leadsResponse = new GetLeadsResponse()
         {
             Leads = new List<LeadDto>()
             {
@@ -71,59 +75,38 @@ public class ProcessingService : IProcessingService
             TimePeriodInDays = 60
         };
 
-        var res = CheckCountOfTransactions(leadsRequest, 1);
+        var res = CheckCountOfTransactions(leadsResponse, 1);
         Console.WriteLine(res);
     }
 
-    private bool CheckCountOfTransactions(GetLeadsRequest request, int countOfTransactionsMustBiggestThen)
+    private bool CheckCountOfTransactions(GetLeadsResponse response, int countOfTransactionsMustBiggestThen)
     {
-        var result = false;
+        if (response.Leads == null) return false;
 
-        if (request.Leads != null)
-        {
-            int countOfDeposit = GetCountOfDepositTransactions(request);
-            int countOfTrasfer = GetCountOFTransferTransactions(request);
+        int countOfDeposit = GetCountOfDepositTransactions(response);
+        int countOfTransfer = GetCountOFTransferTransactions(response);
 
-            int countOfAll = 0;
-            if (countOfTrasfer != 0)
-            {
-                countOfAll = countOfDeposit + countOfTrasfer / 2;
-            }
-            else
-            {
-                countOfAll = countOfDeposit;
-            }
+        int countOfAll = countOfDeposit + (countOfTransfer / 2);
 
-            if (countOfAll > countOfTransactionsMustBiggestThen)
-            {
-                result = true;
-                return result;
-            }
-
-            return result;
-        }
-
-        return result;
+        return countOfAll > countOfTransactionsMustBiggestThen;
     }
 
-    private int GetCountOfDepositTransactions(GetLeadsRequest request)
+    private int GetCountOfTransactionsByType(GetLeadsResponse response, TransactionType type)
     {
-        DateTime startDate = DateTime.Now.AddDays(-request.TimePeriodInDays);
+        DateTime startDate = DateTime.Now.AddDays(-response.TimePeriodInDays);
 
-        foreach (var lead in request.Leads)
+        foreach (var lead in response.Leads)
         {
             if (lead != null && lead.Accounts != null)
             {
                 foreach (var account in lead.Accounts)
                 {
-                    if (lead.Accounts == null) continue;
+                    var transactions = account.Transactions.FindAll(t =>
+                        t.TransactionType == type && t.Date >= startDate);
 
-                    var depositTransactions = account.Transactions.FindAll(t =>
-                        t.TransactionType == TransactionType.Deposit && t.Date >= startDate);
+                    int transactionsCount = transactions.Count;
 
-                    int depositCount = depositTransactions.Count;
-
-                    return depositCount;
+                    return transactionsCount;
                 }
             }
         }
@@ -131,27 +114,14 @@ public class ProcessingService : IProcessingService
         return 0;
     }
 
-    private int GetCountOFTransferTransactions(GetLeadsRequest request)
+    private int GetCountOfDepositTransactions(GetLeadsResponse response)
     {
-        DateTime startDate = DateTime.Now.AddDays(-request.TimePeriodInDays);
+        return GetCountOfTransactionsByType(response, TransactionType.Deposit);
+    }
 
-        foreach (var lead in request.Leads)
-        {
-            if (lead != null && lead.Accounts != null)
-            {
-                foreach (var account in lead.Accounts)
-                {
-                    if (lead.Accounts == null) continue;
-
-                    var transferTransactions = account.Transactions.FindAll(t =>
-                        t.TransactionType == TransactionType.Transfer && t.Date >= startDate);
-                    int transferCount = transferTransactions.Count;
-                    return transferCount;
-                }
-            }
-        }
-
-        return 0;
+    private int GetCountOFTransferTransactions(GetLeadsResponse response)
+    {
+        return GetCountOfTransactionsByType(response, TransactionType.Transfer);
     }
     public async Task<decimal> ConvertToRublesAsync(int amount, CurrencyType currencyType)
     {
