@@ -187,14 +187,14 @@ public class ProcessingService : IProcessingService
         }
     }
     // надо подумать нужно ли сверять при запросе даты рождения с часовым поясом лида
-    public async Task UpdateLeadStatusForBirthdayAsync(GetLeadsRequest request)
+    public void UpdateLeadStatusForBirthday(GetLeadsRequest request)
     {
         foreach (var lead in request.Leads)
         {
             if (lead.BirthDate.Month == DateTime.UtcNow.Month && lead.BirthDate.Day == DateTime.UtcNow.Day)
             {
                 lead.Status = LeadStatus.Vip;
-                await SaveTemporaryVipStatusAsync(lead.Id, TimeSpan.FromDays(14));
+                SaveTemporaryVipStatusAsync(lead.Id, TimeSpan.FromDays(14));
             }
         }
     }
