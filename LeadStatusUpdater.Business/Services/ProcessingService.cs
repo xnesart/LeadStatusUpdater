@@ -6,9 +6,9 @@ namespace LeadStatusUpdater.Business.Services;
 
 public class ProcessingService : IProcessingService
 {
-    public void GetLeadStatus(GetLeadsResponse response)
+    public void GetLeadStatus(RecentTransactionCountResponse response)
     {
-        var leadsResponse = new GetLeadsResponse()
+        var leadsResponse = new RecentTransactionCountResponse()
         {
             Leads = new List<LeadDto>()
             {
@@ -74,7 +74,7 @@ public class ProcessingService : IProcessingService
         Console.WriteLine(res);
     }
 
-    private bool CheckCountOfTransactions(GetLeadsResponse response, int countOfTransactionsMustBiggestThen)
+    private bool CheckCountOfTransactions(RecentTransactionCountResponse response, int countOfTransactionsMustBiggestThen)
     {
         if (response.Leads == null) return false;
 
@@ -86,7 +86,7 @@ public class ProcessingService : IProcessingService
         return countOfAll > countOfTransactionsMustBiggestThen;
     }
 
-    private int GetCountOfTransactionsByType(GetLeadsResponse response, TransactionType type)
+    private int GetCountOfTransactionsByType(RecentTransactionCountResponse response, TransactionType type)
     {
         DateTime startDate = DateTime.Now.AddDays(-response.TimePeriodInDays);
 
@@ -109,12 +109,12 @@ public class ProcessingService : IProcessingService
         return 0;
     }
 
-    private int GetCountOfDepositTransactions(GetLeadsResponse response)
+    private int GetCountOfDepositTransactions(RecentTransactionCountResponse response)
     {
         return GetCountOfTransactionsByType(response, TransactionType.Deposit);
     }
 
-    private int GetCountOFTransferTransactions(GetLeadsResponse response)
+    private int GetCountOFTransferTransactions(RecentTransactionCountResponse response)
     {
         return GetCountOfTransactionsByType(response, TransactionType.Transfer);
     }

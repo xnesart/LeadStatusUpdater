@@ -1,4 +1,3 @@
-using LeadStatusUpdater.Core.Responses;
 using LeadStatusUpdater.Core.Settings;
 using Microsoft.Extensions.Options;
 using RestSharp;

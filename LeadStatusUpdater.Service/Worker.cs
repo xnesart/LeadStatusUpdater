@@ -25,8 +25,8 @@ public class Worker : BackgroundService
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
             }
 
-            GetLeadsResponse response = new GetLeadsResponse();
-            var leads = _httpClient.Get<GetLeadsResponse>("someUrl", stoppingToken);
+            RecentTransactionCountResponse response = new RecentTransactionCountResponse();
+            var leads = _httpClient.Get<RecentTransactionCountResponse>("someUrl", stoppingToken);
             _service.GetLeadStatus(response);
 
             await Task.Delay(1000, stoppingToken);

@@ -4,5 +4,5 @@ namespace LeadStatusUpdater.Business.Services;
 
 public interface IProcessingService
 {
-    void GetLeadStatus(GetLeadsResponse response);
+    void GetLeadStatus(RecentTransactionCountResponse response);
 }
