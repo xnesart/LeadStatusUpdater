@@ -34,7 +34,7 @@ namespace LeadStatusUpdater.Service
 
                // var leadsWithBirtday = await ProcessLeadsWithBirtdays(stoppingToken);
                var leadsWithBirtday = new List<LeadDto>();
-                var leadsWithTransaction = await ProcessLeadsByTransactionCount(stoppingToken, leadsWithBirtday);
+                var leadsWithTransaction = await ProcessLeadsByTransactionCount(stoppingToken, leadsWithBirtday,30);
 
                 await Task.Delay(1000, stoppingToken);
             }
@@ -70,16 +70,16 @@ namespace LeadStatusUpdater.Service
         }
 
         private async Task<List<LeadDto>> ProcessLeadsByTransactionCount(CancellationToken stoppingToken,
-            List<LeadDto> leadsWithBirthday)
+            List<LeadDto> leadsWithBirthday, int byDays)
         {
-            string link = $"https://194.87.210.5:12000/api/transactions/by-period/15";
+            string link = $"https://194.87.210.5:12000/api/transactions/by-period/{byDays}";
         
             try
             {
                 _logger.LogInformation("Getting leads from httpClient");
                 var leads = await _httpClient.Get<List<TransactionResponse>>(link, stoppingToken);
                 
-                var res = _service.SetLeadStatusByTransactions(leads,leadsWithBirthday, 30);
+                var res = _service.SetLeadStatusByTransactions(leads,leadsWithBirthday, byDays);
 
 
                 //await SendUpdateLeadStatusMessage(res);

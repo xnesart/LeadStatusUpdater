@@ -7,7 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Consumer\" />
+      <PackageReference Include="MassTransit" Version="8.2.3" />
+      <PackageReference Include="MassTransit.RabbitMQ" Version="8.2.3" />
+      <PackageReference Include="Serilog" Version="4.0.0" />
     </ItemGroup>
 
 </Project>
