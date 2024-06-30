@@ -1,121 +1,143 @@
 ﻿using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Enums;
 using LeadStatusUpdater.Core.Responses;
+using Messaging.Shared;
 
 namespace LeadStatusUpdater.Business.Services;
 
 public class ProcessingService : IProcessingService
 {
-    public void GetLeadStatus(RecentTransactionCountResponse response)
+    public List<LeadDto> SetLeadStatusByTransactions(List<TransactionResponse> responseList,
+        List<LeadDto> leadsWithBirthday, int countOfTransactionsMustBiggestThen)
     {
-        var leadsResponse = new RecentTransactionCountResponse()
+        //rule 1
+        var filledLeads = FillLeadsAtTransactions(responseList);
+        var leads = ProcessLeads(filledLeads,42);
+        
+
+        return new List<LeadDto>();
+    }
+
+    public List<LeadDto> SetLeadsStatusByBirthday(List<LeadDto> leads, int countOfDays)
+    {
+        DateTime today = DateTime.Now.Date;
+        DateTime thresholdDate = today.AddDays(-countOfDays);
+
+        foreach (var lead in leads)
         {
-            Leads = new List<LeadDto>()
+            DateTime leadBirthdayThisYear = new DateTime(today.Year, lead.BirthDate.Month, lead.BirthDate.Day);
+
+            if (leadBirthdayThisYear == today && lead.Status != LeadStatus.Administrator &&
+                lead.Status != LeadStatus.Block)
             {
-                new LeadDto()
+                lead.Status = LeadStatus.Vip;
+            }
+            else if (leadBirthdayThisYear >= thresholdDate && leadBirthdayThisYear < today &&
+                     lead.Status != LeadStatus.Administrator && lead.Status != LeadStatus.Block)
+            {
+                lead.Status = LeadStatus.Regular;
+            }
+        }
+
+        var res = new List<LeadDto>();
+        res = leads;
+        return res;
+    }
+
+    private List<LeadDto> FillLeadsAtTransactions(List<TransactionResponse> responseList)
+    {
+        if (responseList == null) return new List<LeadDto>();
+
+        //создаем уникальных лидов на основе списка транзакций
+        var list = new List<LeadDto>();
+        var uniqueIds = new HashSet<Guid>();
+
+        foreach (var transaction in responseList)
+        {
+            if (uniqueIds.Add(transaction.Id)) // Add returns false if the item already exists
+            {
+                var newLead = new LeadDto()
                 {
-                    Accounts = new List<AccountDto>()
+                    Id = transaction.LeadId,
+                };
+                list.Add(newLead);
+            }
+        }
+
+        foreach (var lead in list)
+        {
+            foreach (var transaction in responseList)
+            {
+                if (transaction.LeadId == lead.Id)
+                {
+                    var newTransaction = new TransactionDto()
                     {
-                        new AccountDto()
-                        {
-                            Id = Guid.NewGuid(),
-                            Currency = CurrencyType.RUB,
-                            Status = AccountStatus.Active,
-                            Transactions = new List<TransactionDto>()
-                            {
-                                new TransactionDto()
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Amount = 100,
-                                    CurrencyType = CurrencyType.RUB,
-                                    TransactionType = TransactionType.Deposit,
-                                    Date = new DateTime(2024, 04, 20)
-                                },
-                                new TransactionDto()
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Amount = -100,
-                                    CurrencyType = CurrencyType.RUB,
-                                    TransactionType = TransactionType.Transfer,
-                                    Date = new DateTime(2024, 04, 20)
-                                }
-                            }
-                        },
-                        new AccountDto()
-                        {
-                            Id = Guid.NewGuid(),
-                            Currency = CurrencyType.USD,
-                            Status = AccountStatus.Active,
-                            Transactions = new List<TransactionDto>()
-                            {
-                                new TransactionDto()
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Amount = 1,
-                                    CurrencyType = CurrencyType.USD,
-                                    TransactionType = TransactionType.Transfer,
-                                    Date = new DateTime(2024, 04, 20),
-                                }
-                            }
-                        },
-                    },
-                    Address = "Ул. Петра Великого",
-                    BirthDate = new DateTime(1990, 1, 20),
-                    Name = "Петр",
-                    Mail = "jerry@gmail.com",
-                    Phone = "89774343545",
-                    Status = LeadStatus.Regular
-                }
-            },
-            TimePeriodInDays = 60
-        };
+                        Amount = transaction.Amount,
+                        CurrencyType = transaction.CurrencyType,
+                        TransactionType = transaction.TransactionType
+                    };
 
-        var res = CheckCountOfTransactions(leadsResponse, 1);
-        Console.WriteLine(res);
-    }
+                    if (lead.Accounts == null)
+                    {
+                        lead.Accounts = new List<AccountDto>();
+                    }
 
-    private bool CheckCountOfTransactions(RecentTransactionCountResponse response, int countOfTransactionsMustBiggestThen)
-    {
-        if (response.Leads == null) return false;
+                    if (lead.Accounts.Count == 0)
+                    {
+                        var newAccount = new AccountDto();
+                        newAccount.Transactions = new List<TransactionDto>();
+                        lead.Accounts.Add(newAccount);
+                    }
+                    
+                    if (lead.Accounts[0].Transactions == null)
+                    {
+                        lead.Accounts[0].Transactions = new List<TransactionDto>();
+                    }
 
-        int countOfDeposit = GetCountOfDepositTransactions(response);
-        int countOfTransfer = GetCountOFTransferTransactions(response);
-
-        int countOfAll = countOfDeposit + (countOfTransfer / 2);
-
-        return countOfAll > countOfTransactionsMustBiggestThen;
-    }
-
-    private int GetCountOfTransactionsByType(RecentTransactionCountResponse response, TransactionType type)
-    {
-        DateTime startDate = DateTime.Now.AddDays(-response.TimePeriodInDays);
-
-        foreach (var lead in response.Leads)
-        {
-            if (lead != null && lead.Accounts != null)
-            {
-                foreach (var account in lead.Accounts)
-                {
-                    var transactions = account.Transactions.FindAll(t =>
-                        t.TransactionType == type && t.Date >= startDate);
-
-                    int transactionsCount = transactions.Count;
-
-                    return transactionsCount;
+                    lead.Accounts[0].Transactions.Add(newTransaction);
                 }
             }
         }
 
-        return 0;
+        return list;
     }
 
-    private int GetCountOfDepositTransactions(RecentTransactionCountResponse response)
+    private List<LeadDto> ProcessLeads(List<LeadDto> leads, int transactionBiggerThen)
     {
-        return GetCountOfTransactionsByType(response, TransactionType.Deposit);
-    }
+        foreach (var lead in leads)
+        {
+            int transactionCount = 0;
 
-    private int GetCountOFTransferTransactions(RecentTransactionCountResponse response)
-    {
-        return GetCountOfTransactionsByType(response, TransactionType.Transfer);
+            foreach (var account in lead.Accounts)
+            {
+                // Используем HashSet для учета уникальных трансферов между аккаунтами
+                var transferSet = new HashSet<Guid>();
+
+                foreach (var transaction in account.Transactions)
+                {
+                    // Учитываем только уникальные трансферы и не включаем Withdraw
+                    if (transaction.TransactionType != TransactionType.Withdraw)
+                    {
+                        if (transaction.TransactionType == TransactionType.Transfer)
+                        {
+                            if (transferSet.Add(transaction.Id))
+                            {
+                                transactionCount++;
+                            }
+                        }
+                        else
+                        {
+                            transactionCount++;
+                        }
+                    }
+                }
+            }
+            
+            if (transactionCount >= transactionBiggerThen)
+            {
+                lead.Status = LeadStatus.Vip; 
+            }
+        }
+        return leads;
     }
 }
