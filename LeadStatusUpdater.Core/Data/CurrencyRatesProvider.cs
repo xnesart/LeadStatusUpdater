@@ -97,7 +97,7 @@ public class CurrencyRatesProvider : ICurrencyRatesProvider
 
         // Сериализуем результат в JSON и записываем в файл
         var json = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "result.json");
+        var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rates.json");
 
         try
         {
