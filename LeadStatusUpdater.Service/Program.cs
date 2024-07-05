@@ -4,36 +4,35 @@ using LeadStatusUpdater.Core.Settings;
 using MassTransit;
 using Messaging.Shared;
 
-namespace LeadStatusUpdater.Service
+namespace LeadStatusUpdater.Service;
+
+public class Program
 {
-    public class Program
+    public static void Main(string[] args)
     {
-        public static void Main(string[] args)
+        var builder = Host.CreateApplicationBuilder(args);
+
+        var configuration = builder.Configuration;
+        builder.Services.Configure<HttpClientSettings>(configuration.GetSection("HttpClientSettings"));
+
+        builder.Services.AddMassTransit(x =>
         {
-            var builder = Host.CreateApplicationBuilder(args);
-        
-            var configuration = builder.Configuration;
-            builder.Services.Configure<HttpClientSettings>(configuration.GetSection("HttpClientSettings"));
-            builder.Services.Configure<HttpClientSettings>(configuration.GetSection("HttpClientSettings"));
-            
-            builder.Services.AddMassTransit(x =>
+            x.UsingRabbitMq((context, cfg) =>
             {
-                x.UsingRabbitMq((context, cfg) =>
-                {
-                    cfg.Host("rabbitmq://localhost");
+                cfg.Host("rabbitmq://localhost");
 
-                    cfg.Message<LeadListDto>(e => e.SetEntityName("leads-by-birthday"));
-                });
+                cfg.Message<LeadsGuidMessage>(m => { m.SetEntityName("leads-guids-exchange"); });
+
+                cfg.Publish<LeadsGuidMessage>(p => { p.ExchangeType = "fanout"; });
             });
+        });
 
-            // builder.Services.AddMassTransitHostedService();
-            builder.Services.AddTransient<IProcessingService, ProcessingService>();
-            builder.Services.AddTransient<IHttpClientService, HttpClientService>();
-            builder.Services.AddSingleton<ScopeProvider>();
-            builder.Services.AddHostedService<Worker>();
+        builder.Services.AddTransient<IProcessingService, ProcessingService>();
+        builder.Services.AddTransient<IHttpClientService, HttpClientService>();
+        builder.Services.AddSingleton<ScopeProvider>();
+        builder.Services.AddHostedService<Worker>();
 
-            var host = builder.Build();
-            host.Run();
-        }
+        var host = builder.Build();
+        host.Run();
     }
 }
