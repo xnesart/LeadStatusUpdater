@@ -1,7 +1,5 @@
 using LeadStatusUpdater.Business.Providers;
 using LeadStatusUpdater.Business.Services;
-using LeadStatusUpdater.Core.Consumers;
-using LeadStatusUpdater.Core.Data;
 using LeadStatusUpdater.Core.Settings;
 using MassTransit;
 using Messaging.Shared;
@@ -16,17 +14,14 @@ namespace LeadStatusUpdater.Service
         
             var configuration = builder.Configuration;
             builder.Services.Configure<HttpClientSettings>(configuration.GetSection("HttpClientSettings"));
-            builder.Services.AddSingleton<ICurrencyRatesProvider, CurrencyRatesProvider>();
+            builder.Services.Configure<HttpClientSettings>(configuration.GetSection("HttpClientSettings"));
+            
             builder.Services.AddMassTransit(x =>
             {
-                x.AddConsumer<RatesInfoConsumer>();
                 x.UsingRabbitMq((context, cfg) =>
                 {
                     cfg.Host("rabbitmq://localhost");
-                    cfg.ReceiveEndpoint("currency_rates", e =>
-                    {
-                        e.ConfigureConsumer<RatesInfoConsumer>(context);
-                    });
+
                     cfg.Message<LeadListDto>(e => e.SetEntityName("leads-by-birthday"));
                 });
             });

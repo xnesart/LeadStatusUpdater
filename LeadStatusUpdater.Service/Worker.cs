@@ -1,8 +1,8 @@
+using System.Text.Json;
 using LeadStatusUpdater.Business.Services;
 using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Responses;
 using MassTransit;
-using Messaging.Shared;
 
 namespace LeadStatusUpdater.Service
 {
@@ -32,64 +32,64 @@ namespace LeadStatusUpdater.Service
                     _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
                 }
 
-               // var leadsWithBirtday = await ProcessLeadsWithBirtdays(stoppingToken);
-               var leadsWithBirtday = new List<LeadDto>();
-                var leadsWithTransaction = await ProcessLeadsByTransactionCount(stoppingToken, leadsWithBirtday,30);
+                var leadsWithBirtday = await ProcessLeadsWithBirtdays(stoppingToken);
+              
+                var leadsWithTransaction = await ProcessLeadsByTransactionCount(stoppingToken, 15);
 
                 await Task.Delay(1000, stoppingToken);
             }
         }
 
-        private async Task<List<LeadDto>> ProcessLeadsWithBirtdays(CancellationToken stoppingToken)
+        private async Task<List<Guid>> ProcessLeadsWithBirtdays(CancellationToken stoppingToken)
         {
-            string link = $"https://194.87.210.5:12000/leads-birthdate?{BirthdayPeriod}";
+            //брать из настроек
+            string link = $"https://194.87.210.5:12000/leads-birthdate?periodBdate={BirthdayPeriod}";
 
             try
             {
                 _logger.LogInformation("Getting leads from httpClient");
                 var leads = await _httpClient.Get<List<LeadDto>>(link, stoppingToken);
 
-                _logger.LogInformation("Sending leads into SetLeadsStatusByBirthday");
-                var res = _service.SetLeadsStatusByBirthday(leads, BirthdayPeriod);
-      
-                return res;
-                //_logger.LogInformation("Sending leads in Rabbit");
-                //await SendUpdateLeadStatusMessage(res);
+                var result = leads.Select(l => l.Id).ToList();
+                //_logger.LogInformation("Sending leads into SetLeadsStatusByBirthday");
+                //var res = _service.SetLeadsStatusByBirthday(leads, BirthdayPeriod);
 
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation("Published {count} leads with updated status.", res.Count);
-                }
+                return result;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while processing leads by birthday.");
             }
 
-            return new List<LeadDto>();
+            return new List<Guid>();
         }
 
-        private async Task<List<LeadDto>> ProcessLeadsByTransactionCount(CancellationToken stoppingToken,
-            List<LeadDto> leadsWithBirthday, int byDays)
+        private async Task<List<Guid>> ProcessLeadsByTransactionCount(CancellationToken stoppingToken,
+            int byDays)
         {
+            //брать из настроек
             string link = $"https://194.87.210.5:12000/api/transactions/by-period/{byDays}";
-        
+
             try
             {
-                _logger.LogInformation("Getting leads from httpClient");
-                var leads = await _httpClient.Get<List<TransactionResponse>>(link, stoppingToken);
-                
-                var res = _service.SetLeadStatusByTransactions(leads,leadsWithBirthday, byDays);
+                _logger.LogInformation("Getting transactions from httpClient");
+                var transactions = await _httpClient.Get<List<TransactionResponse>>(link, stoppingToken);
 
+                _logger.LogInformation("Processing transactions to update lead statuses");
+                var res = _service.SetLeadStatusByTransactions(transactions);
 
-                //await SendUpdateLeadStatusMessage(res);
+                return res;
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "JSON deserialization error occurred while processing transactions");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while processing leads");
             }
 
-            return new List<LeadDto>();
+            return new List<Guid>();
         }
 
         private async Task SendUpdateLeadStatusMessage(List<LeadDto> newMessage)

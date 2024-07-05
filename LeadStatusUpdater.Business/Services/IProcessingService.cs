@@ -6,6 +6,6 @@ namespace LeadStatusUpdater.Business.Services;
 
 public interface IProcessingService
 {
-    List<LeadDto> SetLeadStatusByTransactions(List<TransactionResponse> responseList,List<LeadDto> leadsWithBirthday, int countOfTransactionsMustBiggestThen);
-    List<LeadDto> SetLeadsStatusByBirthday(List<LeadDto> leads,int countOfDays);
+    List<Guid> SetLeadStatusByTransactions(List<TransactionResponse> responseList);
+    List<Guid> SetLeadsStatusByBirthday(List<LeadDto> leads,int countOfDays);
 }

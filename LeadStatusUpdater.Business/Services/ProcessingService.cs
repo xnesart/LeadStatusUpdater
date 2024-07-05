@@ -1,4 +1,5 @@
-﻿using LeadStatusUpdater.Core.DTOs;
+﻿using System.Text.Json;
+using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Enums;
 using LeadStatusUpdater.Core.Responses;
 using Messaging.Shared;
@@ -7,21 +8,25 @@ namespace LeadStatusUpdater.Business.Services;
 
 public class ProcessingService : IProcessingService
 {
-    public List<LeadDto> SetLeadStatusByTransactions(List<TransactionResponse> responseList,
-        List<LeadDto> leadsWithBirthday, int countOfTransactionsMustBiggestThen)
-    {
-        //rule 1
-        var filledLeads = FillLeadsAtTransactions(responseList);
-        var leads = ProcessLeads(filledLeads,42);
-        
+    private const int TransactionThreshold = 42;
+    private const decimal DepositWithdrawDifferenceThreshold = 13000;
+    private const int VipBirthdayPeriodDays = 14;
 
-        return new List<LeadDto>();
+    public List<Guid> SetLeadStatusByTransactions(List<TransactionResponse> responseList)
+    {
+        var leads = ProcessLeads(responseList);
+        Console.WriteLine();
+
+        return leads;
     }
 
-    public List<LeadDto> SetLeadsStatusByBirthday(List<LeadDto> leads, int countOfDays)
+
+    public List<Guid> SetLeadsStatusByBirthday(List<LeadDto> leads, int countOfDays)
     {
         DateTime today = DateTime.Now.Date;
         DateTime thresholdDate = today.AddDays(-countOfDays);
+
+        var listOfVips = new List<Guid>();
 
         foreach (var lead in leads)
         {
@@ -31,113 +36,90 @@ public class ProcessingService : IProcessingService
                 lead.Status != LeadStatus.Block)
             {
                 lead.Status = LeadStatus.Vip;
+                listOfVips.Add(lead.Id);
             }
-            else if (leadBirthdayThisYear >= thresholdDate && leadBirthdayThisYear < today &&
+            else if (leadBirthdayThisYear < thresholdDate &&
                      lead.Status != LeadStatus.Administrator && lead.Status != LeadStatus.Block)
             {
                 lead.Status = LeadStatus.Regular;
             }
         }
 
-        var res = new List<LeadDto>();
-        res = leads;
-        return res;
+        return listOfVips;
     }
 
-    private List<LeadDto> FillLeadsAtTransactions(List<TransactionResponse> responseList)
+    public List<Guid> ProcessLeads(List<TransactionResponse> transactions)
     {
-        if (responseList == null) return new List<LeadDto>();
+        //задаем значения в месяцах
+        DateTime now = DateTime.Now;
+        DateTime twoMonthsAgo = now.AddMonths(-2);
+        DateTime oneMonthAgo = now.AddMonths(-1);
 
-        //создаем уникальных лидов на основе списка транзакций
-        var list = new List<LeadDto>();
-        var uniqueIds = new HashSet<Guid>();
+        var leads = CreateListWithLeadsFromTransactions(transactions);
 
-        foreach (var transaction in responseList)
-        {
-            if (uniqueIds.Add(transaction.Id)) // Add returns false if the item already exists
-            {
-                var newLead = new LeadDto()
-                {
-                    Id = transaction.LeadId,
-                };
-                list.Add(newLead);
-            }
-        }
-
-        foreach (var lead in list)
-        {
-            foreach (var transaction in responseList)
-            {
-                if (transaction.LeadId == lead.Id)
-                {
-                    var newTransaction = new TransactionDto()
-                    {
-                        Amount = transaction.Amount,
-                        CurrencyType = transaction.CurrencyType,
-                        TransactionType = transaction.TransactionType
-                    };
-
-                    if (lead.Accounts == null)
-                    {
-                        lead.Accounts = new List<AccountDto>();
-                    }
-
-                    if (lead.Accounts.Count == 0)
-                    {
-                        var newAccount = new AccountDto();
-                        newAccount.Transactions = new List<TransactionDto>();
-                        lead.Accounts.Add(newAccount);
-                    }
-                    
-                    if (lead.Accounts[0].Transactions == null)
-                    {
-                        lead.Accounts[0].Transactions = new List<TransactionDto>();
-                    }
-
-                    lead.Accounts[0].Transactions.Add(newTransaction);
-                }
-            }
-        }
-
-        return list;
-    }
-
-    private List<LeadDto> ProcessLeads(List<LeadDto> leads, int transactionBiggerThen)
-    {
         foreach (var lead in leads)
         {
-            int transactionCount = 0;
-
-            foreach (var account in lead.Accounts)
+            if (lead.Status == LeadStatus.Administrator || lead.Status == LeadStatus.Block)
             {
-                // Используем HashSet для учета уникальных трансферов между аккаунтами
-                var transferSet = new HashSet<Guid>();
-
-                foreach (var transaction in account.Transactions)
-                {
-                    // Учитываем только уникальные трансферы и не включаем Withdraw
-                    if (transaction.TransactionType != TransactionType.Withdraw)
-                    {
-                        if (transaction.TransactionType == TransactionType.Transfer)
-                        {
-                            if (transferSet.Add(transaction.Id))
-                            {
-                                transactionCount++;
-                            }
-                        }
-                        else
-                        {
-                            transactionCount++;
-                        }
-                    }
-                }
+                // Не изменяем статус лида, если он админ или заблокирован
+                continue;
             }
-            
-            if (transactionCount >= transactionBiggerThen)
+
+            bool isVip = false;
+
+            var leadTransactions = transactions.Where(t => t.LeadId == lead.Id).ToList();
+
+            // Check transactions in the last 2 months
+            int transactionCount = leadTransactions
+                .Where(t => t.Date >= twoMonthsAgo && t.TransactionType != TransactionType.Withdraw)
+                .GroupBy(t => new { t.Date, t.TransactionType })
+                .Select(g => g.First())
+                .Count();
+
+            if (transactionCount >= TransactionThreshold)
             {
-                lead.Status = LeadStatus.Vip; 
+                isVip = true;
+            }
+
+            // Check deposit and withdraw difference in the last month
+            decimal totalDeposits = leadTransactions
+                .Where(t => t.Date >= oneMonthAgo && t.TransactionType == TransactionType.Deposit)
+                .Sum(t => t.AmountInRUB ?? 0);
+
+            decimal totalWithdraws = leadTransactions
+                .Where(t => t.Date >= oneMonthAgo && t.TransactionType == TransactionType.Withdraw)
+                .Sum(t => t.AmountInRUB ?? 0);
+
+
+            if ((totalDeposits - totalWithdraws) > DepositWithdrawDifferenceThreshold)
+            {
+                isVip = true;
+            }
+
+            Console.WriteLine(lead.Status);
+            lead.Status = isVip ? LeadStatus.Vip : LeadStatus.Regular;
+        }
+
+        var listWithGuids = leads.Where(t=>t.Status == LeadStatus.Vip).Select(t => t.Id).ToList();
+        
+        return listWithGuids;
+    }
+
+    private List<LeadDto> CreateListWithLeadsFromTransactions(List<TransactionResponse> transactions)
+    {
+        var result = new List<LeadDto>();
+
+        foreach (var transaction in transactions)
+        {
+            if (result.All(lead => lead.Id != transaction.LeadId))
+            {
+                result.Add(new LeadDto()
+                {
+                    Id = transaction.LeadId
+                });
             }
         }
-        return leads;
+
+        return result;
     }
 }
