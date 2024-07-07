@@ -1,16 +1,25 @@
-﻿using System.Text.Json;
-using LeadStatusUpdater.Core.DTOs;
+﻿using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Enums;
 using LeadStatusUpdater.Core.Responses;
+using LeadStatusUpdater.Core.Settings;
 using Messaging.Shared;
+using Microsoft.Extensions.Options;
 
 namespace LeadStatusUpdater.Business.Services;
 
 public class ProcessingService : IProcessingService
 {
-    private const int TransactionThreshold = 42;
-    private const decimal DepositWithdrawDifferenceThreshold = 13000;
-    private const int VipBirthdayPeriodDays = 14;
+    private readonly int _transactionThreshold;
+    private readonly decimal _depositWithdrawDifferenceThreshold;
+    private readonly int _vipBirthdayPeriodDays;
+
+    public ProcessingService(IOptions<LeadProcessingSettings> options)
+    {
+        var config = options.Value;
+        _transactionThreshold = config.TransactionThreshold;
+        _depositWithdrawDifferenceThreshold = config.DepositWithdrawDifferenceThreshold;
+        _vipBirthdayPeriodDays = config.VipBirthdayPeriodDays;
+    }
 
     public List<Guid> SetLeadStatusByTransactions(List<TransactionResponse> responseList)
     {
@@ -19,7 +28,6 @@ public class ProcessingService : IProcessingService
 
         return leads;
     }
-
 
     public List<Guid> SetLeadsStatusByBirthday(List<LeadDto> leads, int countOfDays)
     {
@@ -76,7 +84,7 @@ public class ProcessingService : IProcessingService
                 .Select(g => g.First())
                 .Count();
 
-            if (transactionCount >= TransactionThreshold)
+            if (transactionCount >= _transactionThreshold)
             {
                 isVip = true;
             }
@@ -91,7 +99,7 @@ public class ProcessingService : IProcessingService
                 .Sum(t => t.AmountInRUB ?? 0);
 
 
-            if ((totalDeposits - totalWithdraws) > DepositWithdrawDifferenceThreshold)
+            if ((totalDeposits - totalWithdraws) > _depositWithdrawDifferenceThreshold)
             {
                 isVip = true;
             }
@@ -100,8 +108,8 @@ public class ProcessingService : IProcessingService
             lead.Status = isVip ? LeadStatus.Vip : LeadStatus.Regular;
         }
 
-        var listWithGuids = leads.Where(t=>t.Status == LeadStatus.Vip).Select(t => t.Id).ToList();
-        
+        var listWithGuids = leads.Where(t => t.Status == LeadStatus.Vip).Select(t => t.Id).ToList();
+
         return listWithGuids;
     }
 

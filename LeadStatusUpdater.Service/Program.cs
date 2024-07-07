@@ -14,19 +14,20 @@ namespace LeadStatusUpdater.Service
         
             var configuration = builder.Configuration;
             builder.Services.Configure<HttpClientSettings>(configuration.GetSection("HttpClientSettings"));
-            builder.Services.Configure<HttpClientSettings>(configuration.GetSection("HttpClientSettings"));
-            
+
             builder.Services.AddMassTransit(x =>
             {
                 x.UsingRabbitMq((context, cfg) =>
                 {
                     cfg.Host("rabbitmq://localhost");
 
-                    cfg.Message<LeadListDto>(e => e.SetEntityName("leads-by-birthday"));
+                    cfg.Message<LeadsGuidMessage>(m => { m.SetEntityName("leads-guids-exchange"); });
+
+                    cfg.Publish<LeadsGuidMessage>(p => { p.ExchangeType = "fanout"; });
                 });
             });
-
-            // builder.Services.AddMassTransitHostedService();
+            
+            builder.Services.AddMassTransitHostedService();
             builder.Services.AddTransient<IProcessingService, ProcessingService>();
             builder.Services.AddTransient<IHttpClientService, HttpClientService>();
             builder.Services.AddSingleton<ScopeProvider>();
