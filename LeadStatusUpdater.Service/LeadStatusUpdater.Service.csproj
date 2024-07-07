@@ -8,18 +8,25 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="MassTransit" Version="8.2.3" />
-        <PackageReference Include="MassTransit.RabbitMQ" Version="8.2.3" />
+        <PackageReference Include="MassTransit" Version="8.2.3"/>
+        <PackageReference Include="MassTransit.RabbitMQ" Version="8.2.3"/>
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
+<<<<<<< HEAD
         <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
         <PackageReference Include="Serilog" Version="4.0.0" />
         <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.1" />
         <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
         <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+=======
+        <PackageReference Include="Serilog" Version="4.0.0"/>
+        <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.1"/>
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0"/>
+        <PackageReference Include="Serilog.Sinks.File" Version="6.0.0"/>
+>>>>>>> 791201c5460b528731569d2c9ece15f584d80b16
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\LeadStatusUpdater.Business\LeadStatusUpdater.Business.csproj" />
-      <ProjectReference Include="..\LeadStatusUpdater.Core\LeadStatusUpdater.Core.csproj" />
+        <ProjectReference Include="..\LeadStatusUpdater.Business\LeadStatusUpdater.Business.csproj"/>
+        <ProjectReference Include="..\LeadStatusUpdater.Core\LeadStatusUpdater.Core.csproj"/>
     </ItemGroup>
 </Project>
