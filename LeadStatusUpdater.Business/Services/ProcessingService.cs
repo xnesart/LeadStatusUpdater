@@ -1,12 +1,8 @@
 ﻿using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Enums;
 using LeadStatusUpdater.Core.Responses;
-<<<<<<< HEAD
 using LeadStatusUpdater.Core.Settings;
-using Messaging.Shared;
 using Microsoft.Extensions.Options;
-=======
->>>>>>> 791201c5460b528731569d2c9ece15f584d80b16
 
 namespace LeadStatusUpdater.Business.Services;
 
@@ -85,14 +81,12 @@ public class ProcessingService : IProcessingService
                 .Select(g => g.First())
                 .Count();
 
-<<<<<<< HEAD
             if (transactionCount >= _transactionThreshold)
             {
                 isVip = true;
             }
-=======
-            if (transactionCount >= TransactionThreshold) isVip = true;
->>>>>>> 791201c5460b528731569d2c9ece15f584d80b16
+
+            if (transactionCount >= _transactionThreshold) isVip = true;
 
             // Check deposit and withdraw difference in the last month
             var totalDeposits = leadTransactions
@@ -104,14 +98,12 @@ public class ProcessingService : IProcessingService
                 .Sum(t => t.AmountInRUB ?? 0);
 
 
-<<<<<<< HEAD
             if ((totalDeposits - totalWithdraws) > _depositWithdrawDifferenceThreshold)
             {
                 isVip = true;
             }
-=======
-            if (totalDeposits - totalWithdraws > DepositWithdrawDifferenceThreshold) isVip = true;
->>>>>>> 791201c5460b528731569d2c9ece15f584d80b16
+
+            if (totalDeposits - totalWithdraws > _depositWithdrawDifferenceThreshold) isVip = true;
 
             Console.WriteLine(lead.Status);
             lead.Status = isVip ? LeadStatus.Vip : LeadStatus.Regular;
