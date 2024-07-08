@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeadStatusUpdater.Core", "L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeadStatusUpdater.Service", "LeadStatusUpdater.Service\LeadStatusUpdater.Service.csproj", "{264AE8AB-51E3-45E4-BEBD-157E72A8D194}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeadStatusUpdater.Service.Tests", "LeadStatusUpdater.Service.Tests\LeadStatusUpdater.Service.Tests.csproj", "{830DDF4A-2750-43E1-BCF0-3DB5797DA6D0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{264AE8AB-51E3-45E4-BEBD-157E72A8D194}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{264AE8AB-51E3-45E4-BEBD-157E72A8D194}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{264AE8AB-51E3-45E4-BEBD-157E72A8D194}.Release|Any CPU.Build.0 = Release|Any CPU
+		{830DDF4A-2750-43E1-BCF0-3DB5797DA6D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{830DDF4A-2750-43E1-BCF0-3DB5797DA6D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{830DDF4A-2750-43E1-BCF0-3DB5797DA6D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{830DDF4A-2750-43E1-BCF0-3DB5797DA6D0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

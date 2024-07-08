@@ -58,7 +58,7 @@ public class Worker : BackgroundService
     }
 
 
-    private async Task DoWork(CancellationToken cancellationToken)
+    public async Task DoWork(CancellationToken cancellationToken)
     {
         try
         {
@@ -152,7 +152,7 @@ public class Worker : BackgroundService
         }
     }
 
-    private async Task SendUpdateLeadStatusMessage(LeadsMessage newMessage)
+    public async Task SendUpdateLeadStatusMessage(LeadsMessage newMessage)
     {
         using (var scope = _scopeFactory.CreateScope())
         {
