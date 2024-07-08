@@ -5,52 +5,53 @@ using MassTransit;
 using Messaging.Shared;
 using Serilog;
 
-namespace LeadStatusUpdater.Service
+namespace LeadStatusUpdater.Service;
+
+public class Program
 {
-    public class Program
+    public static void Main(string[] args)
     {
-        public static void Main(string[] args)
-        {
-            var host = Host.CreateDefaultBuilder(args).UseSerilog() 
-                .ConfigureServices((context, services) =>
+        IConfiguration configuration;
+
+        var builder = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", false, true);
+
+        configuration = builder.Build();
+
+        var host = Host.CreateDefaultBuilder(args)
+            .UseSerilog((context, configuration) => configuration
+                .ReadFrom.Configuration(context.Configuration)
+                .Enrich.FromLogContext()
+                .WriteTo.Console())
+            .ConfigureServices((context, services) =>
+            {
+                services.AddSingleton(configuration);
+
+                services.Configure<HttpClientSettings>(context.Configuration.GetSection("HttpClientSettings"));
+                services.Configure<LeadProcessingSettings>(context.Configuration.GetSection("ConfigurationMessage"));
+
+                services.AddMassTransit(x =>
                 {
-                    services.Configure<HttpClientSettings>(context.Configuration.GetSection("HttpClientSettings"));
-                    services.Configure<LeadProcessingSettings>(context.Configuration.GetSection("ConfigurationMessage"));
-
-                    services.AddMassTransit(x =>
+                    x.UsingRabbitMq((context, cfg) =>
                     {
-                        x.UsingRabbitMq((context, cfg) =>
-                        {
-                            cfg.Host("rabbitmq://localhost");
+                        cfg.Host("rabbitmq://localhost");
 
-                            cfg.Message<LeadsGuidMessage>(m =>
-                            {
-                                m.SetEntityName("leads-guids-exchange");
-                            });
+                        cfg.Message<LeadsGuidMessage>(m => { m.SetEntityName("leads-guids-exchange"); });
 
-                            cfg.Publish<LeadsGuidMessage>(p =>
-                            {
-                                p.ExchangeType = "fanout";
-                            });
-                        });
+                        cfg.Publish<LeadsGuidMessage>(p => { p.ExchangeType = "fanout"; });
                     });
+                });
 
-                    Log.Logger = new LoggerConfiguration()
-                        .ReadFrom.Configuration(context.Configuration)
-                        .Enrich.FromLogContext()
-                        .WriteTo.Console()
-                        .CreateLogger();
-                    
-                    services.AddMassTransitHostedService();
+                services.AddMassTransitHostedService();
 
-                    services.AddTransient<IProcessingService, ProcessingService>();
-                    services.AddTransient<IHttpClientService, HttpClientService>();
-                    services.AddSingleton<ScopeProvider>();
-                    services.AddHostedService<Worker>();
-                })
-                .Build();
+                services.AddTransient<IProcessingService, ProcessingService>();
+                services.AddTransient<IHttpClientService, HttpClientService>();
+                services.AddSingleton<ScopeProvider>();
+                services.AddHostedService<Worker>();
+            })
+            .Build();
 
-            host.Run();
-        }
+        host.Run();
     }
 }

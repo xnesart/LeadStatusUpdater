@@ -2,35 +2,35 @@
 using LeadStatusUpdater.Core.Enums;
 using LeadStatusUpdater.Core.Responses;
 using LeadStatusUpdater.Core.Settings;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace LeadStatusUpdater.Business.Services;
 
 public class ProcessingService : IProcessingService
 {
-    private readonly int _transactionThreshold;
-    private readonly decimal _depositWithdrawDifferenceThreshold;
-    private readonly int _vipBirthdayPeriodDays;
+    private readonly ILogger<ProcessingService> _logger;
+    private readonly IOptionsMonitor<LeadProcessingSettings> _optionsMonitor;
 
-    public ProcessingService(IOptions<LeadProcessingSettings> options)
+    public ProcessingService(IOptionsMonitor<LeadProcessingSettings> optionsMonitor, ILogger<ProcessingService> logger)
     {
-        var config = options.Value;
-        _transactionThreshold = config.TransactionThreshold;
-        _depositWithdrawDifferenceThreshold = config.DepositWithdrawDifferenceThreshold;
-        _vipBirthdayPeriodDays = config.VipBirthdayPeriodDays;
+        _optionsMonitor = optionsMonitor;
+        _logger = logger;
     }
 
     public List<Guid> SetLeadStatusByTransactions(List<TransactionResponse> responseList)
     {
+        _logger.LogInformation($"{_optionsMonitor.CurrentValue.TransactionThreshold} количество дней");
         var leads = ProcessLeads(responseList);
         Console.WriteLine();
 
         return leads;
     }
-    
+
     public List<Guid> ProcessLeads(List<TransactionResponse> transactions)
     {
-        //задаем значения в месяцах
+        var config = _optionsMonitor.CurrentValue;
+
         var now = DateTime.Now;
         var twoMonthsAgo = now.AddMonths(-2);
         var oneMonthAgo = now.AddMonths(-1);
@@ -40,28 +40,20 @@ public class ProcessingService : IProcessingService
         foreach (var lead in leads)
         {
             if (lead.Status == LeadStatus.Administrator || lead.Status == LeadStatus.Block)
-                // Не изменяем статус лида, если он админ или заблокирован
                 continue;
 
             var isVip = false;
 
             var leadTransactions = transactions.Where(t => t.LeadId == lead.Id).ToList();
 
-            // Check transactions in the last 2 months
             var transactionCount = leadTransactions
                 .Where(t => t.Date >= twoMonthsAgo && t.TransactionType != TransactionType.Withdraw)
                 .GroupBy(t => new { t.Date, t.TransactionType })
                 .Select(g => g.First())
                 .Count();
 
-            if (transactionCount >= _transactionThreshold)
-            {
-                isVip = true;
-            }
+            if (transactionCount >= config.TransactionThreshold) isVip = true;
 
-            if (transactionCount >= _transactionThreshold) isVip = true;
-
-            // Check deposit and withdraw difference in the last month
             var totalDeposits = leadTransactions
                 .Where(t => t.Date >= oneMonthAgo && t.TransactionType == TransactionType.Deposit)
                 .Sum(t => t.AmountInRUB ?? 0);
@@ -70,15 +62,8 @@ public class ProcessingService : IProcessingService
                 .Where(t => t.Date >= oneMonthAgo && t.TransactionType == TransactionType.Withdraw)
                 .Sum(t => t.AmountInRUB ?? 0);
 
+            if (totalDeposits - totalWithdraws > config.DepositWithdrawDifferenceThreshold) isVip = true;
 
-            if ((totalDeposits - totalWithdraws) > _depositWithdrawDifferenceThreshold)
-            {
-                isVip = true;
-            }
-
-            if (totalDeposits - totalWithdraws > _depositWithdrawDifferenceThreshold) isVip = true;
-
-            Console.WriteLine(lead.Status);
             lead.Status = isVip ? LeadStatus.Vip : LeadStatus.Regular;
         }
 

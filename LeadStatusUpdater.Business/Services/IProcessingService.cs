@@ -1,4 +1,3 @@
-using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Responses;
 
 namespace LeadStatusUpdater.Business.Services;
@@ -6,5 +5,4 @@ namespace LeadStatusUpdater.Business.Services;
 public interface IProcessingService
 {
     List<Guid> SetLeadStatusByTransactions(List<TransactionResponse> responseList);
-
 }
