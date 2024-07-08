@@ -3,8 +3,7 @@ using LeadStatusUpdater.Business.Services;
 using LeadStatusUpdater.Core.Settings;
 using MassTransit;
 using Messaging.Shared;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Serilog;
 
 namespace LeadStatusUpdater.Service
 {
@@ -12,10 +11,11 @@ namespace LeadStatusUpdater.Service
     {
         public static void Main(string[] args)
         {
-            var host = Host.CreateDefaultBuilder(args)
+            var host = Host.CreateDefaultBuilder(args).UseSerilog() 
                 .ConfigureServices((context, services) =>
                 {
                     services.Configure<HttpClientSettings>(context.Configuration.GetSection("HttpClientSettings"));
+                    services.Configure<LeadProcessingSettings>(context.Configuration.GetSection("ConfigurationMessage"));
 
                     services.AddMassTransit(x =>
                     {
@@ -35,6 +35,12 @@ namespace LeadStatusUpdater.Service
                         });
                     });
 
+                    Log.Logger = new LoggerConfiguration()
+                        .ReadFrom.Configuration(context.Configuration)
+                        .Enrich.FromLogContext()
+                        .WriteTo.Console()
+                        .CreateLogger();
+                    
                     services.AddMassTransitHostedService();
 
                     services.AddTransient<IProcessingService, ProcessingService>();

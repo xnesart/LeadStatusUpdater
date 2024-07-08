@@ -71,17 +71,17 @@ namespace LeadStatusUpdater.Service
             return base.StartAsync(cancellationToken);
         }
 
-        private void DoWork(CancellationToken cancellationToken)
+        private async Task DoWork(CancellationToken cancellationToken)
         {
             try
             {
-                UpdateAppSettingsAsync(cancellationToken);
+                await UpdateAppSettingsAsync(cancellationToken);
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
 
-                var leadsWithBirthday = ProcessLeadsWithBirthdays(cancellationToken).GetAwaiter().GetResult();
+                var leadsWithBirthday = await ProcessLeadsWithBirthdays(cancellationToken);
                 _logger.LogInformation("Processed leads with birthdays: {count}", leadsWithBirthday.Count);
 
-                var leadsWithTransaction = ProcessLeadsByTransactionCount(cancellationToken).GetAwaiter().GetResult();
+                var leadsWithTransaction = await ProcessLeadsByTransactionCount(cancellationToken);
                 _logger.LogInformation("Processed leads by transaction count: {count}", leadsWithTransaction.Count);
 
                 var message = new LeadsMessage
@@ -90,7 +90,7 @@ namespace LeadStatusUpdater.Service
                 };
 
                 _logger.LogInformation("Prepared LeadsMessage with total leads: {count}", message.Leads.Count);
-                SendUpdateLeadStatusMessage(message).GetAwaiter().GetResult();
+                await SendUpdateLeadStatusMessage(message);
                 _logger.LogInformation("Message sent successfully.");
             }
             catch (Exception ex)
@@ -119,15 +119,15 @@ namespace LeadStatusUpdater.Service
                 var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
                 var appSettings = await GetAppSettings(stoppingToken);
                 var baseUrlForSettings = appSettings["HttpClientSettings"]["UrlForSettings"].ToString();
-        
+
                 var configurationMessage =
                     await _httpClient.Get<Dictionary<string, string>>(baseUrlForSettings, stoppingToken);
-        
+
                 foreach (var kvp in configurationMessage)
                 {
                     appSettings["ConfigurationMessage"][kvp.Key] = kvp.Value;
                 }
-        
+
                 var json = appSettings.ToString();
                 await File.WriteAllTextAsync(appSettingsPath, json, stoppingToken);
             }

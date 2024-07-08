@@ -27,34 +27,7 @@ public class ProcessingService : IProcessingService
 
         return leads;
     }
-
-    public List<Guid> SetLeadsStatusByBirthday(List<LeadDto> leads, int countOfDays)
-    {
-        var today = DateTime.Now.Date;
-        var thresholdDate = today.AddDays(-countOfDays);
-
-        var listOfVips = new List<Guid>();
-
-        foreach (var lead in leads)
-        {
-            var leadBirthdayThisYear = new DateTime(today.Year, lead.BirthDate.Month, lead.BirthDate.Day);
-
-            if (leadBirthdayThisYear == today && lead.Status != LeadStatus.Administrator &&
-                lead.Status != LeadStatus.Block)
-            {
-                lead.Status = LeadStatus.Vip;
-                listOfVips.Add(lead.Id);
-            }
-            else if (leadBirthdayThisYear < thresholdDate &&
-                     lead.Status != LeadStatus.Administrator && lead.Status != LeadStatus.Block)
-            {
-                lead.Status = LeadStatus.Regular;
-            }
-        }
-
-        return listOfVips;
-    }
-
+    
     public List<Guid> ProcessLeads(List<TransactionResponse> transactions)
     {
         //задаем значения в месяцах
