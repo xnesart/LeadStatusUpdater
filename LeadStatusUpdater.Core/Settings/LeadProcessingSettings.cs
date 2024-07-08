@@ -2,7 +2,12 @@
 
 public class LeadProcessingSettings
 {
-    public int TransactionThreshold { get; set; }
-    public decimal DepositWithdrawDifferenceThreshold { get; set; }
-    public int VipBirthdayPeriodDays { get; set; }
+    //правило
+    public int BillingPeriodForTransactionsCount { get; set; }
+    public int TransactionsCount { get; set; }
+    //второе правило
+    public int BillingPeriodForDifferenceBetweenDepositAndWithdraw { get; set; }
+    public decimal DifferenceBetweenDepositAndWithdraw { get; set; }
+    //третье
+    public int BillingPeriodForBirthdays { get; set; }
 }

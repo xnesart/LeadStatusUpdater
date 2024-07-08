@@ -65,10 +65,10 @@ public class Worker : BackgroundService
             await UpdateAppSettingsAsync(cancellationToken);
             _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
 
-            var leadsWithBirthday = await ProcessLeadsWithBirthdays(cancellationToken);
+            var leadsWithBirthday = await ProcessingLeadsWithBirthdays(cancellationToken);
             _logger.LogInformation("Processed leads with birthdays: {count}", leadsWithBirthday.Count);
 
-            var leadsWithTransaction = await ProcessLeadsByTransactionCount(cancellationToken);
+            var leadsWithTransaction = await ProcessingLeadsByTransactionCount(cancellationToken);
             _logger.LogInformation("Processed leads by transaction count: {count}", leadsWithTransaction.Count);
 
             var message = new LeadsMessage
@@ -99,47 +99,11 @@ public class Worker : BackgroundService
         return base.StopAsync(cancellationToken);
     }
 
-    private async Task UpdateAppSettingsAsync(CancellationToken stoppingToken)
-    {
-        try
-        {
-            var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
-            var appSettings = await GetAppSettings(stoppingToken);
-            var baseUrlForSettings = appSettings["HttpClientSettings"]["UrlForSettings"].ToString();
-
-            var configurationMessage =
-                await _httpClient.Get<Dictionary<string, string>>(baseUrlForSettings, stoppingToken);
-
-            foreach (var kvp in configurationMessage)
-            {
-                appSettings["ConfigurationMessage"][kvp.Key] = new JValue(kvp.Value);
-            }
-
-            var json = appSettings.ToString();
-
-            await File.WriteAllTextAsync(appSettingsPath, json, stoppingToken);
-
-            _logger.LogInformation("AppSettings updated successfully.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating appsettings.json.");
-            throw; 
-        }
-    }
-
-    private async Task<JObject> GetAppSettings(CancellationToken stoppingToken)
-    {
-        var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
-        var appSettingsJson = await File.ReadAllTextAsync(appSettingsPath, stoppingToken);
-        return JObject.Parse(appSettingsJson);
-    }
-
-    private async Task<List<Guid>> ProcessLeadsWithBirthdays(CancellationToken stoppingToken)
+    private async Task<List<Guid>> ProcessingLeadsWithBirthdays(CancellationToken stoppingToken)
     {
         var appSettings = await GetAppSettings(stoppingToken);
         var linkBaseUrl = appSettings["HttpClientSettings"]["BaseUrl"].ToString();
-        var birthdayPeriod = appSettings["ConfigurationMessage"]["VipBirthdayPeriodDays"].ToString();
+        var birthdayPeriod = appSettings["ConfigurationMessage"]["BillingPeriodForBirthdays"].ToString();
 
         var link = $"{linkBaseUrl}leads-birthdate?periodBdate={birthdayPeriod}";
 
@@ -156,13 +120,18 @@ public class Worker : BackgroundService
         }
     }
 
-    private async Task<List<Guid>> ProcessLeadsByTransactionCount(CancellationToken stoppingToken)
+    private async Task<List<Guid>> ProcessingLeadsByTransactionCount(CancellationToken stoppingToken)
     {
         var appSettings = await GetAppSettings(stoppingToken);
         var linkBaseUrl = appSettings["HttpClientSettings"]["BaseUrl"].ToString();
-        var transactionThreshold = appSettings["ConfigurationMessage"]["TransactionThreshold"].ToString();
-
+        var transactionThreshold = appSettings["ConfigurationMessage"]["TransactionsCount"].ToString();
+        var billingThreshold =
+            appSettings["ConfigurationMessage"]["BillingPeriodForDifferenceBetweenDepositAndWithdraw"].ToString();
+        var countOfDays = int.Parse(billingThreshold) - int.Parse(transactionThreshold);
+        
         var link = $"{linkBaseUrl}api/transactions/by-period/{transactionThreshold}";
+        
+        if(countOfDays > 0) link = $"{linkBaseUrl}api/transactions/by-period/{billingThreshold}";
 
         try
         {
@@ -200,5 +169,41 @@ public class Worker : BackgroundService
                 throw;
             }
         }
+    }
+
+    private async Task UpdateAppSettingsAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+            var appSettings = await GetAppSettings(stoppingToken);
+            var baseUrlForSettings = appSettings["HttpClientSettings"]["UrlForSettings"].ToString();
+
+            var configurationMessage =
+                await _httpClient.Get<Dictionary<string, string>>(baseUrlForSettings, stoppingToken);
+
+            foreach (var kvp in configurationMessage)
+            {
+                appSettings["ConfigurationMessage"][kvp.Key] = new JValue(kvp.Value);
+            }
+
+            var json = appSettings.ToString();
+
+            await File.WriteAllTextAsync(appSettingsPath, json, stoppingToken);
+
+            _logger.LogInformation("AppSettings updated successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating appsettings.json.");
+            throw;
+        }
+    }
+
+    private async Task<JObject> GetAppSettings(CancellationToken stoppingToken)
+    {
+        var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+        var appSettingsJson = await File.ReadAllTextAsync(appSettingsPath, stoppingToken);
+        return JObject.Parse(appSettingsJson);
     }
 }
