@@ -57,8 +57,7 @@ public class Worker : BackgroundService
         return base.StartAsync(cancellationToken);
     }
 
-
-    private async Task DoWork(CancellationToken cancellationToken)
+    public async Task DoWork(CancellationToken cancellationToken)
     {
         try
         {
@@ -124,7 +123,7 @@ public class Worker : BackgroundService
     {
         var appSettings = await GetAppSettings(stoppingToken);
         var linkBaseUrl = appSettings["HttpClientSettings"]["BaseUrl"].ToString();
-        var transactionThreshold = appSettings["ConfigurationMessage"]["TransactionsCount"].ToString();
+        var transactionThreshold = appSettings["ConfigurationMessage"]["BillingPeriodForTransactionsCount"].ToString();
         var billingThreshold =
             appSettings["ConfigurationMessage"]["BillingPeriodForDifferenceBetweenDepositAndWithdraw"].ToString();
         var countOfDays = int.Parse(billingThreshold) - int.Parse(transactionThreshold);
