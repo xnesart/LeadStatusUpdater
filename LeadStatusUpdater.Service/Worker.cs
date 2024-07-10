@@ -128,9 +128,9 @@ public class Worker : BackgroundService
             appSettings["ConfigurationMessage"]["BillingPeriodForDifferenceBetweenDepositAndWithdraw"].ToString();
         var countOfDays = int.Parse(billingThreshold) - int.Parse(transactionThreshold);
         
-        var link = $"{linkBaseUrl}api/transactions/by-period/{transactionThreshold}";
+        var link = $"{linkBaseUrl}api/transactions/by-period?countDays={transactionThreshold}";
         
-        if(countOfDays > 0) link = $"{linkBaseUrl}api/transactions/by-period/{billingThreshold}";
+        if(countOfDays > 0) link = $"{linkBaseUrl}api/transactions/by-period?countDays={billingThreshold}";
 
         try
         {

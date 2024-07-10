@@ -32,7 +32,6 @@ public class ProcessingService : IProcessingService
             $"запрос лидов с днями рождения за {_optionsMonitor.CurrentValue.BillingPeriodForBirthdays} дней");
 
         var leads = ProcessLeads(responseList);
-        Console.WriteLine();
 
         return leads;
     }
