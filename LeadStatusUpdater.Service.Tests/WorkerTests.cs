@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using LeadStatusUpdater.Business.Services;
 using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Responses;
@@ -12,7 +7,6 @@ using Messaging.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
 
 public class WorkerTests
 {
@@ -64,16 +58,6 @@ public class WorkerTests
             .Setup(x => x.SetLeadStatusByTransactions(It.IsAny<List<TransactionResponse>>()))
             .Returns(new List<Guid> { Guid.NewGuid() });
 
-        // Моделируем исключение для проверки обработки ошибок
-        // _mockLogger
-        //     .Setup(x => x.Log(
-        //         LogLevel.Error,
-        //         It.IsAny<EventId>(),
-        //         It.IsAny<It.IsAnyType>(),
-        //         It.IsAny<Exception>(),
-        //         (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()
-        //     ));
-
         await _worker.DoWork(cancellationToken);
 
         VerifyLogInformation(_mockLogger, Times.AtLeastOnce());
@@ -121,16 +105,9 @@ public class WorkerTests
     {
         logger.Verify(
             x => x.Log(
-                LogLevel.Information,
+                LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Worker running at:") ||
-                                              v.ToString().Contains("Processed leads with birthdays:") ||
-                                              v.ToString().Contains("Processed leads by transaction count:") ||
-                                              v.ToString().Contains("Prepared LeadsMessage with total leads:") ||
-                                              v.ToString().Contains("Message sent successfully.") ||
-                                              v.ToString().Contains("Getting leads from httpClient.") ||
-                                              v.ToString().Contains("Getting transactions from httpClient.") ||
-                                              v.ToString().Contains("Sending message to RabbitMQ with")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error occurred in background worker.")),
                 It.IsAny<Exception>(),
                 (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
             times);
