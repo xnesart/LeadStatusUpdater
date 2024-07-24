@@ -1,121 +1,119 @@
 ﻿using LeadStatusUpdater.Core.DTOs;
 using LeadStatusUpdater.Core.Enums;
 using LeadStatusUpdater.Core.Responses;
+using LeadStatusUpdater.Core.Settings;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace LeadStatusUpdater.Business.Services;
 
 public class ProcessingService : IProcessingService
 {
-    public void GetLeadStatus(GetLeadsResponse response)
-    {
-        var leadsResponse = new GetLeadsResponse()
-        {
-            Leads = new List<LeadDto>()
-            {
-                new LeadDto()
-                {
-                    Accounts = new List<AccountDto>()
-                    {
-                        new AccountDto()
-                        {
-                            Id = Guid.NewGuid(),
-                            Currency = CurrencyType.RUB,
-                            Status = AccountStatus.Active,
-                            Transactions = new List<TransactionDto>()
-                            {
-                                new TransactionDto()
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Amount = 100,
-                                    CurrencyType = CurrencyType.RUB,
-                                    TransactionType = TransactionType.Deposit,
-                                    Date = new DateTime(2024, 04, 20)
-                                },
-                                new TransactionDto()
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Amount = -100,
-                                    CurrencyType = CurrencyType.RUB,
-                                    TransactionType = TransactionType.Transfer,
-                                    Date = new DateTime(2024, 04, 20)
-                                }
-                            }
-                        },
-                        new AccountDto()
-                        {
-                            Id = Guid.NewGuid(),
-                            Currency = CurrencyType.USD,
-                            Status = AccountStatus.Active,
-                            Transactions = new List<TransactionDto>()
-                            {
-                                new TransactionDto()
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Amount = 1,
-                                    CurrencyType = CurrencyType.USD,
-                                    TransactionType = TransactionType.Transfer,
-                                    Date = new DateTime(2024, 04, 20),
-                                }
-                            }
-                        },
-                    },
-                    Address = "Ул. Петра Великого",
-                    BirthDate = new DateTime(1990, 1, 20),
-                    Name = "Петр",
-                    Mail = "jerry@gmail.com",
-                    Phone = "89774343545",
-                    Status = LeadStatus.Regular
-                }
-            },
-            TimePeriodInDays = 60
-        };
+    private readonly ILogger<ProcessingService> _logger;
+    private readonly IOptionsMonitor<LeadProcessingSettings> _optionsMonitor;
 
-        var res = CheckCountOfTransactions(leadsResponse, 1);
-        Console.WriteLine(res);
+    public ProcessingService(IOptionsMonitor<LeadProcessingSettings> optionsMonitor, ILogger<ProcessingService> logger)
+    {
+        _optionsMonitor = optionsMonitor;
+        _logger = logger;
     }
 
-    private bool CheckCountOfTransactions(GetLeadsResponse response, int countOfTransactionsMustBiggestThen)
+    public List<Guid> SetLeadStatusByTransactions(List<TransactionResponse> responseList)
     {
-        if (response.Leads == null) return false;
+        _logger.LogInformation(
+            $"количество дней, за которые лид должен был совершить нужное количество транзакций {_optionsMonitor.CurrentValue.BillingPeriodForTransactionsCount} ");
+        _logger.LogInformation(
+            $"количество транзакций {_optionsMonitor.CurrentValue.TransactionsCount} ");
+        _logger.LogInformation(
+            $"количество дней, за которые считаем разницу между депозитом и виздроу {_optionsMonitor.CurrentValue.BillingPeriodForDifferenceBetweenDepositAndWithdraw} ");
+        _logger.LogInformation(
+            $"разница между суммой депозитов и суммой withdraw лида должна быть больше {_optionsMonitor.CurrentValue.DifferenceBetweenDepositAndWithdraw} ");
+        _logger.LogInformation(
+            $"запрос лидов с днями рождения за {_optionsMonitor.CurrentValue.BillingPeriodForBirthdays} дней");
 
-        int countOfDeposit = GetCountOfDepositTransactions(response);
-        int countOfTransfer = GetCountOFTransferTransactions(response);
+        var leads = ProcessLeads(responseList);
 
-        int countOfAll = countOfDeposit + (countOfTransfer / 2);
-
-        return countOfAll > countOfTransactionsMustBiggestThen;
+        return leads;
     }
 
-    private int GetCountOfTransactionsByType(GetLeadsResponse response, TransactionType type)
+    private List<Guid> ProcessLeads(List<TransactionResponse> transactions)
     {
-        DateTime startDate = DateTime.Now.AddDays(-response.TimePeriodInDays);
+        var config = _optionsMonitor.CurrentValue;
 
-        foreach (var lead in response.Leads)
+        var leads = CreateListWithLeadsFromTransactions(transactions);
+
+        var leadsWithRightCountOfTransactions = GetLeadsWithRightNumberTransactions(leads, transactions);
+        var leadsWithDepositMoreThanWithdraw = GetLeadsWithDepositMoreThanWithdraw(leads, transactions);
+        
+        var generalLeadsGuids = leadsWithRightCountOfTransactions
+            .Union(leadsWithDepositMoreThanWithdraw)
+            .Select(lead => lead.Id)
+            .Distinct()
+            .ToList();
+
+        return generalLeadsGuids;
+    }
+
+    private List<LeadDto> GetLeadsWithRightNumberTransactions(List<LeadDto> leads,
+        List<TransactionResponse> transactionsList)
+    {
+        var countOfDays = _optionsMonitor.CurrentValue.BillingPeriodForTransactionsCount;
+        var countOfTransactions = _optionsMonitor.CurrentValue.TransactionsCount;
+
+        var startDate = DateTime.Now.AddDays(-countOfDays);
+        var result = new List<LeadDto>();
+
+        foreach (var lead in leads)
         {
-            if (lead != null && lead.Accounts != null)
-            {
-                foreach (var account in lead.Accounts)
-                {
-                    var transactions = account.Transactions.FindAll(t =>
-                        t.TransactionType == type && t.Date >= startDate);
+            var leadTransactions = transactionsList.Where(t => t.LeadId == lead.Id).ToList();
+            var transactionsAmount = leadTransactions
+                .Where(t => t.Date >= startDate && t.TransactionType != TransactionType.Withdraw)
+                .GroupBy(t => new { t.Date, t.TransactionType })
+                .Select(g => g.First())
+                .Count();
 
-                    int transactionsCount = transactions.Count;
-
-                    return transactionsCount;
-                }
-            }
+            if (transactionsAmount > countOfTransactions) result.Add(lead);
         }
 
-        return 0;
+        return result;
     }
 
-    private int GetCountOfDepositTransactions(GetLeadsResponse response)
+    private List<LeadDto> GetLeadsWithDepositMoreThanWithdraw(List<LeadDto> leads,
+        List<TransactionResponse> transactionsList)
     {
-        return GetCountOfTransactionsByType(response, TransactionType.Deposit);
+        var countOfDays = _optionsMonitor.CurrentValue.BillingPeriodForDifferenceBetweenDepositAndWithdraw;
+        var difference = _optionsMonitor.CurrentValue.DifferenceBetweenDepositAndWithdraw;
+
+        var startDate = DateTime.Now.AddDays(-countOfDays);
+        var result = new List<LeadDto>();
+
+        foreach (var lead in leads)
+        {
+            var totalDeposits = transactionsList
+                .Where(t => t.Date >= startDate && t.TransactionType == TransactionType.Deposit)
+                .Sum(t => t.AmountInRUB ?? 0);
+
+            var totalWithdraws = transactionsList
+                .Where(t => t.Date >= startDate && t.TransactionType == TransactionType.Withdraw)
+                .Sum(t => t.AmountInRUB ?? 0);
+
+            if (totalDeposits - totalWithdraws > difference) result.Add(lead);
+        }
+
+        return result;
     }
 
-    private int GetCountOFTransferTransactions(GetLeadsResponse response)
+    private List<LeadDto> CreateListWithLeadsFromTransactions(List<TransactionResponse> transactions)
     {
-        return GetCountOfTransactionsByType(response, TransactionType.Transfer);
+        var result = new List<LeadDto>();
+
+        foreach (var transaction in transactions)
+            if (result.All(lead => lead.Id != transaction.LeadId))
+                result.Add(new LeadDto
+                {
+                    Id = transaction.LeadId
+                });
+
+        return result;
     }
 }
