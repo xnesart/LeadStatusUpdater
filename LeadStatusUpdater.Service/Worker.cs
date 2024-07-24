@@ -151,7 +151,7 @@ public class Worker : BackgroundService
         }
     }
 
-    private async Task SendUpdateLeadStatusMessage(LeadsMessage newMessage)
+    public async Task SendUpdateLeadStatusMessage(LeadsMessage newMessage)
     {
         using (var scope = _scopeFactory.CreateScope())
         {
